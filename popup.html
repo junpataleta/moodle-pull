@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <script src="jquery-3.2.1.min.js"></script>
+        <script src="popup.js"></script>
+    </head>
+    <body>
+        <h5>Click one of the buttons to generate pull command for the appropriate Moodle branch:</h5>
+        <form>
+            <div class="form-group text-center">
+                <button class="btn btn-default" id="copy-master" data-version="master" disabled>master</button>
+            </div>
+            <div class="form-group text-center">
+                <button class="btn btn-default" id="copy-32" data-version="32" disabled>MOODLE_32_STABLE</button>
+            </div>
+            <div class="form-group text-center">
+                <button class="btn btn-default" id="copy-31" data-version="31" disabled>MOODLE_31_STABLE</button>
+            </div>
+            <div class="form-group">
+                <label for="git-command">Git Pull Command</label>
+                <input id="git-command" class="form-control" />
+            </div>
+
+        </form>
+    </body>
+</html>
