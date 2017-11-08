@@ -31,7 +31,8 @@ chrome.extension.onRequest.addListener(function(links) {
 
 function generatePullCommand(button) {
     var version = $(button).data('version');
-    var result = 'git pull ' + pullFromRepository + ' ' + pullBranches[version];
+    var branch = $(button).text();
+    var result = 'git checkout ' + branch + ' && git pull ' + pullFromRepository + ' ' + pullBranches[version];
     $("#git-command").val(result);
     $("#git-command").focus();
     document.execCommand('SelectAll');
