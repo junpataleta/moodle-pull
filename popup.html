@@ -1,26 +1,19 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
         <script src="jquery-3.2.1.min.js"></script>
         <script src="popup.js"></script>
     </head>
     <body>
-        <h5>Click one of the buttons to generate pull command for the appropriate Moodle branch:</h5>
-        <form>
-            <div class="form-group text-center">
-                <button class="btn btn-default" id="copy-master" data-version="master" disabled>master</button>
-            </div>
-            <div class="form-group text-center">
-                <button class="btn btn-default" id="copy-34" data-version="34" disabled>MOODLE_34_STABLE</button>
-            </div>
-            <div class="form-group text-center">
-                <button class="btn btn-default" id="copy-33" data-version="33" disabled>MOODLE_33_STABLE</button>
-            </div>
-            <div class="form-group">
-                <label for="git-command">Git Pull Command</label>
-                <input id="git-command" class="form-control" />
-            </div>
-        </form>
+        <div class="container" id="pull-container">
+            <p class="font-weight-light">Click one of the buttons to generate a pull command for the appropriate Moodle branch:</p>
+            <form id="pull-form">
+                <div class="form-group">
+                    <label for="git-command">Git Pull Command</label>
+                    <input id="git-command" class="form-control" />
+                </div>
+            </form>
+        </div>
     </body>
 </html>
