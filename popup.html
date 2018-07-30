@@ -6,14 +6,16 @@
         <script src="popup.js"></script>
     </head>
     <body>
-        <div class="container" id="pull-container">
-            <p class="font-weight-light">Click one of the buttons to generate a pull command for the appropriate Moodle branch:</p>
-            <form id="pull-form">
-                <div class="form-group">
-                    <label for="git-command">Git Pull Command</label>
-                    <input id="git-command" class="form-control" />
-                </div>
-            </form>
+        <div class="card" id="pull-container" style="min-width: 200px;">
+            <div class="card-body">
+                <p class="card-text">Click one of the buttons to generate a pull command for the appropriate Moodle branch:</p>
+                <form id="pull-form">
+                    <div class="form-group">
+                        <label for="git-command">Git Pull Command</label>
+                        <input id="git-command" class="form-control" />
+                    </div>
+                </form>
+            </div>
         </div>
     </body>
 </html>
