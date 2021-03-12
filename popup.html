@@ -11,6 +11,14 @@
                 <p class="card-text">Click one of the buttons to generate a pull command for the appropriate Moodle branch:</p>
                 <form id="pull-form">
                     <div class="form-group">
+                        <label for="command-type">Type</label>
+                        <select id="command-type" class="form-control">
+                            <option value="0">Pull</option>
+                            <option value="1">Fetch</option>
+                            <option value="2">Repo + branch only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="git-command">Git Pull Command</label>
                         <input id="git-command" class="form-control" />
                     </div>
