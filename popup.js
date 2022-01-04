@@ -27,13 +27,11 @@ chrome.runtime.onMessage.addListener(function(links) {
                     if (version !== 'master') {
                         versionText = 'MOODLE_' + version + '_STABLE';
                     }
-                    const buttonDiv = $('<div class="form-group text-center"/>');
-                    const buttonHtml = '<button class="btn btn-default btn-block" id="copy-' + version +
+                    const buttonHtml = '<button class="btn btn-outline-secondary" id="copy-' + version +
                         '" data-version="' + version + '">' + versionText + '</button>';
                     const button = $(buttonHtml);
-                    buttonDiv.html(button);
                     // Append this button to the form.
-                    buttonDiv.appendTo('#pull-form');
+                    button.appendTo('#buttons-container');
                     // Add event listener to button.
                     button.click(function(e) {
                         e.preventDefault();
@@ -61,13 +59,16 @@ function generatePullCommand(button) {
             result = `git checkout ${branch} && git pull ${pullFromRepository} ${pullBranches[version]}`;
             break;
     }
-    const commandText = $("#git-command");
-    commandText.val(result);
-    commandText.focus();
-    document.execCommand('SelectAll');
-    document.execCommand("Copy", false, null);
-    console.log("Git pull command '" + result + "' has been copied to the clipboard.");
-    window.close();
+    navigator.clipboard.writeText(result).then(() => {
+        // Change button text to indicate the command has been copied.
+        $(button).text(`Copied for ${version}!`);
+        console.log("Git pull command '" + result + "' has been copied to the clipboard.");
+    }).catch().finally(() => {
+        // Delay by a quarter of a second before closing the popup.
+        setTimeout(() => {
+            window.close();
+        }, 250);
+    });
 }
 
 $(document).ready(function() {
