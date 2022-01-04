@@ -4,4 +4,4 @@ links = links.map(function(element) {
     return element.innerHTML;
 });
 
-chrome.extension.sendRequest(links);
+chrome.runtime.sendMessage(links);

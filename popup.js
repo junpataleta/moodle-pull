@@ -1,7 +1,7 @@
 const pullBranches = [];
 let pullFromRepository = '';
 
-chrome.extension.onRequest.addListener(function(links) {
+chrome.runtime.onMessage.addListener(function(links) {
     // Reverse the links so master comes first, then latest stable down to oldest.
     links.reverse();
     for (const index in links) {
