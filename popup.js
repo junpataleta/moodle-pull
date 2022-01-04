@@ -1,11 +1,11 @@
-let pullBranches = [];
+const pullBranches = [];
 let pullFromRepository = '';
 
 chrome.extension.onRequest.addListener(function(links) {
     // Reverse the links so master comes first, then latest stable down to oldest.
     links.reverse();
-    for (let index in links) {
-        let container = $(links[index]);
+    for (const index in links) {
+        const container = $(links[index]);
         if (container.text().indexOf('Pull') >= 0) {
             if (container.text().indexOf('Diff URL') >= 0) {
                 continue;
@@ -13,9 +13,9 @@ chrome.extension.onRequest.addListener(function(links) {
             if (container.text().indexOf('from Repository') >= 0) {
                 pullFromRepository = $(container[2]).text().trim();
             } else {
-                let parts = $(container[0]).text().split(" ");
+                const parts = $(container[0]).text().trim().split(" ");
                 let version = null;
-                for (let i in parts) {
+                for (const i in parts) {
                     if (parts[i].length > 0 && parts[i] !== 'Pull' && parts[i] !== 'Branch:') {
                         version = parts[i].toLowerCase();
                         version = version.replace(".", "");
@@ -27,10 +27,10 @@ chrome.extension.onRequest.addListener(function(links) {
                     if (version !== 'master') {
                         versionText = 'MOODLE_' + version + '_STABLE';
                     }
-                    let buttonDiv = $('<div class="form-group text-center"/>');
-                    let buttonHtml = '<button class="btn btn-default btn-block" id="copy-' + version +
+                    const buttonDiv = $('<div class="form-group text-center"/>');
+                    const buttonHtml = '<button class="btn btn-default btn-block" id="copy-' + version +
                         '" data-version="' + version + '">' + versionText + '</button>';
-                    let button = $(buttonHtml);
+                    const button = $(buttonHtml);
                     buttonDiv.html(button);
                     // Append this button to the form.
                     buttonDiv.appendTo('#pull-form');
@@ -46,8 +46,8 @@ chrome.extension.onRequest.addListener(function(links) {
 });
 
 function generatePullCommand(button) {
-    let version = $(button).data('version');
-    let branch = $(button).text();
+    const version = $(button).data('version');
+    const branch = $(button).text();
     const commandType = parseInt(document.getElementById('command-type').value);
     let result;
     switch (commandType) {
@@ -61,7 +61,7 @@ function generatePullCommand(button) {
             result = `git checkout ${branch} && git pull ${pullFromRepository} ${pullBranches[version]}`;
             break;
     }
-    let commandText = $("#git-command");
+    const commandText = $("#git-command");
     commandText.val(result);
     commandText.focus();
     document.execCommand('SelectAll');
