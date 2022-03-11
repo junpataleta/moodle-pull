@@ -55,6 +55,9 @@ function generatePullCommand(button) {
         case 2:
             result = `${pullFromRepository} ${pullBranches[version]}`
             break;
+        case 3:
+            result = `git pull ${pullFromRepository} ${pullBranches[version]}`;
+            break;
         default:
             result = `git checkout ${branch} && git pull ${pullFromRepository} ${pullBranches[version]}`;
             break;
