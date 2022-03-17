@@ -12,6 +12,8 @@ chrome.runtime.onMessage.addListener(function(links) {
             }
             if (container.text().indexOf('from Repository') >= 0) {
                 pullFromRepository = $(container[2]).text().trim();
+                // Make sure GitHub repository URLs are not using the unauthenticated git protocol.
+                pullFromRepository = pullFromRepository.replace("git://github.com", "https://github.com");
             } else {
                 const parts = $(container[0]).text().trim().split(" ");
                 let version = null;
