@@ -20,7 +20,12 @@ chrome.runtime.onMessage.addListener(function(links) {
                 for (const i in parts) {
                     if (parts[i].length > 0 && parts[i] !== 'Pull' && parts[i] !== 'Branch:') {
                         version = parts[i].toLowerCase();
-                        version = version.replace(".", "");
+                        if (version !== 'master') {
+                            // Split version number.
+                            const verParts = version.split(".");
+                            // Pre-pad decimal part with 0 and join.
+                            version = verParts[0] + verParts[1].padStart(2, "0");
+                        }
                     }
                 }
                 if (version !== null) {
