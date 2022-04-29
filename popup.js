@@ -23,8 +23,13 @@ chrome.runtime.onMessage.addListener(function(links) {
                         if (version !== 'master') {
                             // Split version number.
                             const verParts = version.split(".");
-                            // Pre-pad decimal part with 0 and join.
-                            version = verParts[0] + verParts[1].padStart(2, "0");
+                            if (verParts[0] >= 4) {
+                                // Pre-pad decimal part with 0 and join for 4.0 and up.
+                                version = verParts[0] + verParts[1].padStart(2, "0");
+                            } else {
+                                // Just combine the whole number and decimal part
+                                version = verParts[0] + verParts[1];
+                            }
                         }
                     }
                 }
