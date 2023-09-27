@@ -90,8 +90,11 @@ $(document).ready(function() {
     chrome.windows.getCurrent(function (currentWindow) {
         chrome.tabs.query({active: true, windowId: currentWindow.id},
             function(activeTabs) {
-                chrome.tabs.executeScript(
-                    activeTabs[0].id, {file: 'send_links.js', allFrames: true});
-            });
+                chrome.scripting.executeScript({
+                    target: {tabId: activeTabs[0].id, allFrames: true},
+                    files: ['send_links.js']
+                });
+            }
+        );
     });
 });
