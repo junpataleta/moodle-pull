@@ -35,20 +35,21 @@ chrome.runtime.onMessage.addListener(function(links) {
                 }
                 if (version !== null) {
                     pullBranches[version] = $(container[2]).text().trim();
-                    let versionText = version;
-                    if (version !== 'master') {
-                        versionText = 'MOODLE_' + version + '_STABLE';
-                    }
-                    const buttonHtml = '<button class="btn btn-outline-secondary" id="copy-' + version +
-                        '" data-version="' + version + '">' + versionText + '</button>';
+                    const branch = version === 'master' ? 'master' : 'MOODLE_' + version + '_STABLE'
+                    const buttonHtml = `<button
+                        class="btn btn-outline-secondary m-1"
+                        id="copy-${version}"
+                        data-version="${version}"
+                        data-branch="${branch}"
+                    >${version}</button>`;
                     const button = $(buttonHtml);
-                    // Append this button to the form.
-                    button.appendTo('#buttons-container');
                     // Add event listener to button.
                     button.click(function(e) {
                         e.preventDefault();
                         generatePullCommand(this);
                     });
+                    // Append this button to the form.
+                    button.appendTo('#pull-form [data-action]');
                 }
             }
         }
@@ -57,8 +58,8 @@ chrome.runtime.onMessage.addListener(function(links) {
 
 function generatePullCommand(button) {
     const version = $(button).data('version');
-    const branch = $(button).text();
-    const commandType = parseInt(document.getElementById('command-type').value);
+    const branch = $(button).data('branch');
+    const commandType = parseInt($(button).closest('[data-action]').data('action'));
     let result;
     switch (commandType) {
         case 1:
@@ -75,9 +76,13 @@ function generatePullCommand(button) {
             break;
     }
     navigator.clipboard.writeText(result).then(() => {
-        // Change button text to indicate the command has been copied.
-        $(button).text(`Copied for ${version}!`);
         console.log("Git pull command '" + result + "' has been copied to the clipboard.");
+        // Change button text to indicate the command has been copied.
+        const tooltip = new bootstrap.Tooltip(button, {
+            title: `Copied for ${version}!`,
+            trigger: "manual",
+        });
+        tooltip.show();
     }).catch().finally(() => {
         // Delay by a quarter of a second before closing the popup.
         setTimeout(() => {
@@ -90,8 +95,11 @@ $(document).ready(function() {
     chrome.windows.getCurrent(function (currentWindow) {
         chrome.tabs.query({active: true, windowId: currentWindow.id},
             function(activeTabs) {
-                chrome.tabs.executeScript(
-                    activeTabs[0].id, {file: 'send_links.js', allFrames: true});
-            });
+                chrome.scripting.executeScript({
+                    target: {tabId: activeTabs[0].id, allFrames: true},
+                    files: ['send_links.js']
+                });
+            }
+        );
     });
 });
