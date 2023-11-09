@@ -3,7 +3,7 @@
 
   "name": "Pull - Moodle Integration",
   "description": "A simple Chrome extension that generates git pull commands from the Moodle Tracker for Moodle integrators.",
-  "version": "0.5",
+  "version": "0.6",
 
   "action": {
     "default_icon": "icon.png",
