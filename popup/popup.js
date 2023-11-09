@@ -43,7 +43,13 @@ chrome.runtime.onMessage.addListener(links => {
             }
             if (version !== null) {
                 pullBranches[version] = fieldValue.trim();
-                const branch = version === 'master' ? 'master' : 'MOODLE_' + version + '_STABLE'
+                const mainBranches = ['main', 'master'];
+                let branch;
+                if (mainBranches.indexOf(version) >= 0) {
+                    branch = version;
+                } else {
+                    branch = `MOODLE_${version}_STABLE`;
+                }
 
                 // Append this button to the form.
                 const actionCells = document.querySelectorAll('#pull-form [data-copytype]');
