@@ -1,3 +1,15 @@
+const mainBranches = {
+    main: 'main',
+    master: 'master',
+};
+
+const copyTypes = {
+    pull: 'pull',
+    pullOnly: 'pull-only',
+    fetch: 'fetch',
+    repoBranch: 'repo-branch',
+}
+
 const pullBranches = [];
 let pullFromRepository = '';
 
@@ -43,9 +55,8 @@ chrome.runtime.onMessage.addListener(links => {
             }
             if (version !== null) {
                 pullBranches[version] = fieldValue.trim();
-                const mainBranches = ['main', 'master'];
                 let branch;
-                if (mainBranches.indexOf(version) >= 0) {
+                if (mainBranches.hasOwnProperty(version)) {
                     branch = version;
                 } else {
                     branch = `MOODLE_${version}_STABLE`;
@@ -56,11 +67,15 @@ chrome.runtime.onMessage.addListener(links => {
                 for (let i = 0; i < actionCells.length; i++) {
                     const cell = actionCells[i];
                     // Create the copy button.
-                    const button = document.createElement('button');
-                    button.className = "btn btn-outline-secondary m-1";
-                    button.dataset.version = version;
-                    button.dataset.branch = branch;
-                    button.innerText = version;
+                    const button = createCommandButton(branch, version);
+
+                    // Create a pull button for the main branch if the field from the tracker still points to the master branch.
+                    if (branch === 'master' && cell.dataset.copytype === copyTypes.pull) {
+                        pullBranches[mainBranches.main] = pullBranches[version];
+                        const mainButton = createCommandButton(mainBranches.main, mainBranches.main);
+                        cell.append(mainButton);
+                    }
+
                     // Append to the cell.
                     cell.append(button);
                 }
@@ -69,19 +84,41 @@ chrome.runtime.onMessage.addListener(links => {
     }
 });
 
+/**
+ * Create a command button that will be appended to the popup later.
+ *
+ * @param branch
+ * @param version
+ * @returns {HTMLButtonElement}
+ */
+const createCommandButton = (branch, version) => {
+    const button = document.createElement('button');
+    button.className = "btn btn-outline-secondary m-1";
+    button.type = 'button';
+    button.dataset.version = version;
+    button.dataset.branch = branch;
+    button.innerText = version;
+    return button;
+};
+
+/**
+ * Generate the command to be copied to the clipboard.
+ *
+ * @param button
+ */
 const generatePullCommand = button => {
     const version = button.dataset.version;
     const branch = button.dataset.branch;
     const commandType = parseInt(button.closest('[data-copytype]').dataset.copytype);
     let result;
     switch (commandType) {
-        case 1:
+        case copyTypes.fetch:
             result = `git fetch ${pullFromRepository} ${pullBranches[version]}`;
             break;
-        case 2:
+        case copyTypes.repoBranch:
             result = `${pullFromRepository} ${pullBranches[version]}`
             break;
-        case 3:
+        case copyTypes.pullOnly:
             result = `git pull ${pullFromRepository} ${pullBranches[version]}`;
             break;
         default:
