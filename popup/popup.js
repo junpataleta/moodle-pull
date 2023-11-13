@@ -109,7 +109,7 @@ const createCommandButton = (branch, version) => {
 const generatePullCommand = button => {
     const version = button.dataset.version;
     const branch = button.dataset.branch;
-    const commandType = parseInt(button.closest('[data-copytype]').dataset.copytype);
+    const commandType = button.closest('[data-copytype]').dataset.copytype;
     let result;
     switch (commandType) {
         case copyTypes.fetch:
