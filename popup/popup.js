@@ -38,18 +38,22 @@ chrome.runtime.onMessage.addListener(links => {
             const parts = fieldLabel.trim().split(" ");
             let version = null;
             for (const i in parts) {
-                if (parts[i].length > 0 && parts[i] !== 'Pull' && parts[i] !== 'Branch:') {
-                    version = parts[i].toLowerCase();
-                    if (version !== 'master') {
-                        // Split version number.
-                        const verParts = version.split(".");
-                        if (verParts[0] >= 4) {
-                            // Pre-pad decimal part with 0 and join for 4.0 and up.
-                            version = verParts[0] + verParts[1].padStart(2, "0");
-                        } else {
-                            // Just combine the whole number and decimal part
-                            version = verParts[0] + verParts[1];
-                        }
+                if (parts[i].length === 0 || parts[i] === 'Pull' || parts[i] === 'Branch:') {
+                    continue;
+                }
+                version = parts[i].toLowerCase();
+                if (version === mainBranches.master) {
+                    // If the tracker field still uses master, point this to main.
+                    version = mainBranches.main;
+                } else if (version !== mainBranches.main) {
+                    // Split version number.
+                    const verParts = version.split(".");
+                    if (verParts[0] >= 4) {
+                        // Pre-pad decimal part with 0 and join for 4.0 and up.
+                        version = verParts[0] + verParts[1].padStart(2, "0");
+                    } else {
+                        // Just combine the whole number and decimal part
+                        version = verParts[0] + verParts[1];
                     }
                 }
             }
@@ -68,13 +72,6 @@ chrome.runtime.onMessage.addListener(links => {
                     const cell = actionCells[i];
                     // Create the copy button.
                     const button = createCommandButton(branch, version);
-
-                    // Create a pull button for the main branch if the field from the tracker still points to the master branch.
-                    if (branch === 'master' && cell.dataset.copytype === copyTypes.pull) {
-                        pullBranches[mainBranches.main] = pullBranches[version];
-                        const mainButton = createCommandButton(mainBranches.main, mainBranches.main);
-                        cell.append(mainButton);
-                    }
 
                     // Append to the cell.
                     cell.append(button);
