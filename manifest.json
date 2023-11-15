@@ -3,7 +3,7 @@
 
   "name": "Pull - Moodle Integration",
   "description": "A simple Chrome extension that generates git pull commands from the Moodle Tracker for Moodle integrators.",
-  "version": "0.7",
+  "version": "0.8",
 
   "action": {
     "default_icon": "icon.png",
@@ -13,10 +13,20 @@
   "permissions": [
     "scripting",
     "activeTab",
-    "clipboardWrite"
+    "clipboardWrite",
+    "storage"
   ],
 
   "host_permissions": [
     "https://tracker.moodle.org/browse/MDL-*"
-  ]
+  ],
+
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+
+  "background": {
+    "service_worker": "scripts/background.js"
+  }
 }
