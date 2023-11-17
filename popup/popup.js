@@ -3,13 +3,6 @@ const mainBranches = {
     master: 'master',
 };
 
-const copyTypes = {
-    pull: 'pull',
-    pullOnly: 'pull-only',
-    fetch: 'fetch',
-    repoBranch: 'repo-branch',
-}
-
 const pullBranches = [];
 let pullFromRepository = '';
 
@@ -67,7 +60,7 @@ chrome.runtime.onMessage.addListener(links => {
                 }
 
                 // Append this button to the form.
-                const actionCells = document.querySelectorAll('#pull-form [data-copytype]');
+                const actionCells = document.querySelectorAll('#pull-form [data-action]');
                 for (let i = 0; i < actionCells.length; i++) {
                     const cell = actionCells[i];
                     // Create the copy button.
@@ -106,37 +99,71 @@ const createCommandButton = (branch, version) => {
 const generatePullCommand = button => {
     const version = button.dataset.version;
     const branch = button.dataset.branch;
-    const commandType = button.closest('[data-copytype]').dataset.copytype;
-    let result;
-    switch (commandType) {
-        case copyTypes.fetch:
-            result = `git fetch ${pullFromRepository} ${pullBranches[version]}`;
-            break;
-        case copyTypes.repoBranch:
-            result = `${pullFromRepository} ${pullBranches[version]}`
-            break;
-        case copyTypes.pullOnly:
-            result = `git pull ${pullFromRepository} ${pullBranches[version]}`;
-            break;
-        default:
-            result = `git checkout ${branch} && git pull ${pullFromRepository} ${pullBranches[version]}`;
-            break;
-    }
-    navigator.clipboard.writeText(result).then(() => {
-        console.log("Git pull command '" + result + "' has been copied to the clipboard.");
-        // Change button text to indicate the command has been copied.
-        const tooltip = new bootstrap.Tooltip(button, {
-            title: `Copied for ${version}!`,
-            trigger: "manual",
-        });
-        tooltip.show();
-    }).catch().finally(() => {
-        // Delay by half a second before closing the popup.
-        setTimeout(window.close, 500);
+    const commandType = parseInt(button.closest('[data-action]').dataset.action);
+    
+    chrome.storage.sync.get(['config'], function(data) {
+        const config = data.config || [];
+
+        const commandConfig = config[commandType];
+        if (commandConfig) {
+            // Use the dynamically loaded command from config.
+            const result = commandConfig.command
+                .replaceAll("{{BRANCH}}", branch)
+                .replaceAll("{{PULL_REPOSITORY}}", pullFromRepository)
+                .replaceAll("{{PULL_BRANCH}}", pullBranches[version]);
+
+            navigator.clipboard.writeText(result).then(() => {
+                console.log("Git pull command '" + result + "' has been copied to the clipboard.");
+
+                // Change button text to indicate the command has been copied.
+                const tooltip = new bootstrap.Tooltip(button, {
+                    title: `Copied for ${version}!`,
+                    trigger: "manual",
+                });
+                tooltip.show();
+            }).catch().finally(() => {
+                // Delay by half a second before closing the popup.
+                setTimeout(window.close, 500);
+            });
+        } else {
+            console.error(`Configuration not found for action ${commandType}`);
+        }
     });
 }
 
+/**
+ * Generate the table based on the configuration data and append it to the popup.
+ *
+ * @param {Array<Object>} config - An array of objects representing the configuration data
+ * where each object has two properties: `title` (string) and `command` (string).
+ */
+function generateTable(config) {
+    const tableBody = document.getElementById('pull-table-body');
+
+    // Loop through the configuration and create table rows
+    for (key in config) {
+        const row = document.createElement('tr');
+        const titleCell = document.createElement('th');
+        titleCell.classList.add('fw-normal');
+        titleCell.textContent = config[key].title;
+        const actionCell = document.createElement('td');
+        actionCell.setAttribute('data-action', key);
+        row.appendChild(titleCell);
+        row.appendChild(actionCell);
+
+        // Append the row to the table body
+        tableBody.appendChild(row);
+    };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    chrome.storage.sync.get(['config'], function(data) {
+        const config = data.config || [];
+        
+        // Use the configuration data to generate the table.
+        generateTable(config);
+    });
+
     chrome.windows.getCurrent(currentWindow => {
         chrome.tabs.query({active: true, windowId: currentWindow.id},
             activeTabs => {
