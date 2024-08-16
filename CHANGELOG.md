@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refinements to the config page, such as:
   - Config validation. 
   - Displaying the default configuration and allowing integrators to copy it to the clipboard.
+- New command buttons:
+  - `Pull all` - Generates a pull command for all branches with patches and copies to the clipboard.
+  - `Push command` - Generates a push command for the all branches and copies to the clipboard.
 
 ### Changed
 

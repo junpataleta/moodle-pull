@@ -1,5 +1,6 @@
 const pullBranches = [];
 let pullFromRepository = '';
+let config = [];
 
 chrome.runtime.onMessage.addListener(links => {
     // Reverse the links so main comes first, then latest stable down to oldest.
@@ -44,12 +45,7 @@ chrome.runtime.onMessage.addListener(links => {
             }
             if (version !== null) {
                 pullBranches[version] = fieldValue.trim();
-                let branch;
-                if (version === 'main') {
-                    branch = version;
-                } else {
-                    branch = `MOODLE_${version}_STABLE`;
-                }
+                const branch = getMoodleBranch(version);
 
                 // Append this button to the form.
                 const actionCells = document.querySelectorAll('#pull-form [data-action]');
@@ -64,7 +60,20 @@ chrome.runtime.onMessage.addListener(links => {
             }
         }
     }
+
+    // Enable Pull all and Push buttons if there are command buttons.
+    if (pullBranches.length > 0) {
+        document.getElementById('bulkCommands').removeAttribute('hidden');
+    }
 });
+
+const getMoodleBranch = (version) => {
+    if (version === 'main') {
+        return version;
+    } else {
+        return `MOODLE_${version}_STABLE`;
+    }
+}
 
 /**
  * Create a command button that will be appended to the popup later.
@@ -79,6 +88,7 @@ const createCommandButton = (branch, version) => {
     button.type = 'button';
     button.dataset.version = version;
     button.dataset.branch = branch;
+    button.dataset.type = 'command';
     button.innerText = version;
     return button;
 };
@@ -87,49 +97,46 @@ const createCommandButton = (branch, version) => {
  * Generate the command to be copied to the clipboard.
  *
  * @param button
+ * @return {string}
  */
 const generatePullCommand = button => {
     const version = button.dataset.version;
     const branch = button.dataset.branch;
-    const commandType = parseInt(button.closest('[data-action]').dataset.action);
+    const commandType = parseInt(button.closest('[data-action]').dataset.type);
+    const commandAction = parseInt(button.closest('[data-action]').dataset.action);
 
-    chrome.storage.sync.get(['config'], function(data) {
-        const config = data.config || defaultConfig;
+    const commandConfig = config[commandAction];
+    if (commandConfig) {
+        // Use the dynamically loaded command from config.
+        return commandConfig.command
+            .replaceAll("{{BRANCH}}", branch)
+            .replaceAll("{{PULL_REPOSITORY}}", pullFromRepository)
+            .replaceAll("{{PULL_BRANCH}}", pullBranches[version]);
+    }
+    console.error(`Configuration not found for action ${commandType}`);
+    return '';
+}
 
-        const commandConfig = config[commandType];
-        if (commandConfig) {
-            // Use the dynamically loaded command from config.
-            const result = commandConfig.command
-                .replaceAll("{{BRANCH}}", branch)
-                .replaceAll("{{PULL_REPOSITORY}}", pullFromRepository)
-                .replaceAll("{{PULL_BRANCH}}", pullBranches[version]);
+const copyToClipboard = (command, tooltipTarget, successMessage) => {
+    navigator.clipboard.writeText(command).then(() => {
+        console.log("Git pull command '" + command + "' has been copied to the clipboard.");
 
-            navigator.clipboard.writeText(result).then(() => {
-                console.log("Git pull command '" + result + "' has been copied to the clipboard.");
-
-                // Change button text to indicate the command has been copied.
-                const tooltip = new bootstrap.Tooltip(button, {
-                    title: `Copied for ${version}!`,
-                    trigger: "manual",
-                });
-                tooltip.show();
-            }).catch().finally(() => {
-                // Delay by half a second before closing the popup.
-                setTimeout(window.close, 500);
-            });
-        } else {
-            console.error(`Configuration not found for action ${commandType}`);
-        }
+        // Change button text to indicate the command has been copied.
+        const tooltip = new bootstrap.Tooltip(tooltipTarget, {
+            title: successMessage,
+            trigger: "manual",
+        });
+        tooltip.show();
+    }).catch().finally(() => {
+        // Delay by half a second before closing the popup.
+        setTimeout(window.close, 500);
     });
 }
 
 /**
  * Generate the table based on the configuration data and append it to the popup.
- *
- * @param {Array<Object>} config - An array of objects representing the configuration data
- * where each object has two properties: `title` (string) and `command` (string).
  */
-function generateTable(config) {
+function generateTable() {
     const tableBody = document.getElementById('pull-table-body');
 
     // Loop through the configuration and create table rows
@@ -151,10 +158,10 @@ function generateTable(config) {
 
 document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.get(['config'], function(data) {
-        const config = data.config || defaultConfig;
+        config = data.config || defaultConfig;
 
         // Use the configuration data to generate the table.
-        generateTable(config);
+        generateTable();
     });
 
     chrome.windows.getCurrent(currentWindow => {
@@ -170,10 +177,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add event listener to copy buttons.
     document.addEventListener('click', e => {
-        const button = e.target.closest('button');
-        e.preventDefault();
-        if (button) {
-            generatePullCommand(button);
+        const commandButton = e.target.closest('button[data-type="command"]');
+        if (commandButton) {
+            const command = generatePullCommand(commandButton);
+            if (command) {
+                copyToClipboard(command, commandButton, `Copied for ${commandButton.dataset.version}`);
+            }
+        }
+
+        // Generate the pull command for all branches and copy to the clipboard.
+        const btnPullAll = e.target.closest('#pullAll');
+        if (btnPullAll) {
+            const buttons = document.querySelectorAll('td[data-type="pull"] button[data-type="command"]');
+            const pullCommands = [];
+            buttons.forEach(button => {
+                const command = generatePullCommand(button);
+                if (command) {
+                    pullCommands.push(command);
+                }
+            });
+            copyToClipboard(pullCommands.join(" && "), btnPullAll, `Pull commands copied for all branches!`);
+        }
+
+        // Generate the push command and copy to the clipboard.
+        const btnPush = e.target.closest('#pushCommand');
+        if (btnPush) {
+            const pushBranches = [];
+            Object.keys(pullBranches).forEach(version => {
+                pushBranches.push(getMoodleBranch(version));
+            })
+            copyToClipboard(`git push origin ${pushBranches.join(" ")}`, btnPush, `Push command copied!`);
         }
     });
 });
