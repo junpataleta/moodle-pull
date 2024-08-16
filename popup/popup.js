@@ -140,6 +140,7 @@ function generateTable(config) {
         titleCell.textContent = config[key].title;
         const actionCell = document.createElement('td');
         actionCell.setAttribute('data-action', key);
+        actionCell.setAttribute('data-type', config[key].type);
         row.appendChild(titleCell);
         row.appendChild(actionCell);
 
