@@ -1,13 +1,8 @@
-const mainBranches = {
-    main: 'main',
-    master: 'master',
-};
-
 const pullBranches = [];
 let pullFromRepository = '';
 
 chrome.runtime.onMessage.addListener(links => {
-    // Reverse the links so master comes first, then latest stable down to oldest.
+    // Reverse the links so main comes first, then latest stable down to oldest.
     links.reverse();
     for (const index in links) {
         const dummy = document.createElement('div');
@@ -35,10 +30,7 @@ chrome.runtime.onMessage.addListener(links => {
                     continue;
                 }
                 version = parts[i].toLowerCase();
-                if (version === mainBranches.master) {
-                    // If the tracker field still uses master, point this to main.
-                    version = mainBranches.main;
-                } else if (version !== mainBranches.main) {
+                if (version !== 'main') {
                     // Split version number.
                     const verParts = version.split(".");
                     if (verParts[0] >= 4) {
@@ -53,7 +45,7 @@ chrome.runtime.onMessage.addListener(links => {
             if (version !== null) {
                 pullBranches[version] = fieldValue.trim();
                 let branch;
-                if (mainBranches.hasOwnProperty(version)) {
+                if (version === 'main') {
                     branch = version;
                 } else {
                     branch = `MOODLE_${version}_STABLE`;
