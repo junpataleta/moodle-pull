@@ -100,9 +100,9 @@ const generatePullCommand = button => {
     const version = button.dataset.version;
     const branch = button.dataset.branch;
     const commandType = parseInt(button.closest('[data-action]').dataset.action);
-    
+
     chrome.storage.sync.get(['config'], function(data) {
-        const config = data.config || [];
+        const config = data.config || defaultConfig;
 
         const commandConfig = config[commandType];
         if (commandConfig) {
@@ -141,7 +141,7 @@ function generateTable(config) {
     const tableBody = document.getElementById('pull-table-body');
 
     // Loop through the configuration and create table rows
-    for (key in config) {
+    for (let key in config) {
         const row = document.createElement('tr');
         const titleCell = document.createElement('th');
         titleCell.classList.add('fw-normal');
@@ -153,13 +153,13 @@ function generateTable(config) {
 
         // Append the row to the table body
         tableBody.appendChild(row);
-    };
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.get(['config'], function(data) {
-        const config = data.config || [];
-        
+        const config = data.config || defaultConfig;
+
         // Use the configuration data to generate the table.
         generateTable(config);
     });
