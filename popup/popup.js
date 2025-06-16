@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener(links => {
         dummy.innerHTML = links[index];
         const container = dummy.children;
         const fieldLabel = container[0].innerText;
-        const fieldValue = container[1].innerText;
+        let fieldValue;
         // Skip non-Pull X.Y... fields.
         if (fieldLabel.indexOf('Pull') === -1) {
             continue;
@@ -20,14 +20,16 @@ chrome.runtime.onMessage.addListener(links => {
             continue;
         }
         if (fieldLabel.indexOf('from Repository') >= 0) {
-            pullFromRepository = fieldValue.trim();
+            fieldValue = container[1].querySelector('a');
+            pullFromRepository = fieldValue.getAttribute('href');
             // Make sure GitHub repository URLs are not using the unauthenticated git protocol.
             pullFromRepository = pullFromRepository.replace("git://github.com", "https://github.com");
         } else {
+            fieldValue = container[1].innerText;
             const parts = fieldLabel.trim().split(" ");
             let version = null;
             for (const i in parts) {
-                if (parts[i].length === 0 || parts[i] === 'Pull' || parts[i] === 'Branch:') {
+                if (parts[i].length === 0 || parts[i] === 'Pull' || parts[i] === 'Branch') {
                     continue;
                 }
                 version = parts[i].toLowerCase();
