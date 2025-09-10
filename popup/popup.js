@@ -46,7 +46,11 @@ chrome.runtime.onMessage.addListener(links => {
                 }
             }
             if (version !== null) {
-                pullBranches[version] = fieldValue.trim();
+                const trimmedValue = fieldValue.trim();
+                if (trimmedValue.length === 0 || trimmedValue === 'None') {
+                    continue
+                }
+                pullBranches[version] = trimmedValue;
                 const branch = getMoodleBranch(version);
 
                 // Append this button to the form.
