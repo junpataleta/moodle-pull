@@ -47,8 +47,13 @@ chrome.runtime.onMessage.addListener(links => {
             }
             if (version !== null) {
                 const trimmedValue = fieldValue.trim();
-                if (trimmedValue.length === 0 || trimmedValue === 'None') {
-                    continue
+                const placeholderWords = [
+                    'None',
+                    'Add text',
+                    'Add URL',
+                ];
+                if (trimmedValue.length === 0 || placeholderWords.includes(trimmedValue)) {
+                    continue;
                 }
                 pullBranches[version] = trimmedValue;
                 const branch = getMoodleBranch(version);
