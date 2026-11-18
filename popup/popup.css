@@ -1,0 +1,14 @@
+/*
+ * Bootstrap's outline secondary button keeps its light mode grey in dark mode, which does not have enough contrast
+ * against the dark background. Use a lighter grey in dark mode instead.
+ */
+[data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #adb5bd;
+    --bs-btn-border-color: #adb5bd;
+    --bs-btn-hover-color: #212529;
+    --bs-btn-hover-bg: #adb5bd;
+    --bs-btn-hover-border-color: #adb5bd;
+    --bs-btn-active-color: #212529;
+    --bs-btn-active-bg: #adb5bd;
+    --bs-btn-active-border-color: #adb5bd;
+}

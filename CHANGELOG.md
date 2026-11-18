@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Dark mode support. The popup and the configuration page now follow the system's light or dark colour scheme.
+
 ### Changed
 
 - Bootstrap has been upgraded to v5.3.9.
