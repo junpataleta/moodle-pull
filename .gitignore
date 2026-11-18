@@ -1,1 +1,5 @@
 /.idea/
+
+# web-ext signing
+/.amo-upload-uuid
+/web-ext-artifacts/
