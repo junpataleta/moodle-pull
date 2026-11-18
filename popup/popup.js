@@ -1,4 +1,4 @@
-const pullBranches = [];
+const pullBranches = {};
 let pullFromRepository = '';
 let config = [];
 
@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener(links => {
     }
 
     // Enable Pull all and Push buttons if there are command buttons.
-    if (pullBranches.length > 0) {
+    if (Object.keys(pullBranches).length > 0) {
         document.getElementById('bulkCommands').removeAttribute('hidden');
     }
 });
