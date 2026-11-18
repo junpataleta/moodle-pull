@@ -20,6 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `Pull all` and `Push command` buttons not showing when `main` is the only branch with a patch.
 - Command buttons occasionally not being generated if the tracker fields were received before the configuration was loaded.
+- Command buttons being generated for pull branch fields that only contain placeholder text (e.g. `None`, `Add text`, `Add URL`).
+
+## [0.9.0] - 2025-09-10
+
+### Changed
+
+- Updated to work with the new Jira tracker's issue page layout.
+
+### Fixed
+
+- Command buttons being generated for empty pull branch fields.
 
 ## [0.8.0] - 2024-08-16
 
