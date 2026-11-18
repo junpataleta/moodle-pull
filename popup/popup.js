@@ -2,15 +2,43 @@ const pullBranches = {};
 let pullFromRepository = '';
 let config = [];
 
-chrome.runtime.onMessage.addListener(links => {
-    // Reverse the links so main comes first, then latest stable down to oldest.
-    links.reverse();
-    for (const index in links) {
-        const dummy = document.createElement('div');
-        dummy.innerHTML = links[index];
-        const container = dummy.children;
-        const fieldLabel = container[0].innerText;
-        let fieldValue;
+const PLACEHOLDER_WORDS = [
+    'None',
+    'Add text',
+    'Add URL',
+];
+
+/**
+ * Runs in the context of the tracker page and returns the issue's custom fields.
+ *
+ * This function is serialised and injected into the page, so it must not reference anything outside its own scope.
+ *
+ * @returns {{label: string, value: string, href: (string|null)}[]}
+ */
+const extractTrackerFields = () => {
+    const selector = '[data-testid$="details-group"] '
+        + 'div[data-component-selector="jira-issue-field-heading-field-wrapper"][data-testid*="customfield"]';
+    return Array.from(document.querySelectorAll(selector)).map(wrapper => {
+        const [labelElement, valueElement] = wrapper.children;
+        const link = valueElement ? valueElement.querySelector('a') : null;
+        return {
+            label: labelElement ? labelElement.textContent : '',
+            value: valueElement ? valueElement.textContent : '',
+            href: link ? link.getAttribute('href') : null,
+        };
+    });
+};
+
+/**
+ * Process the fields extracted from the tracker page and generate the command buttons.
+ *
+ * @param {{label: string, value: string, href: (string|null)}[]} fields
+ */
+const processTrackerFields = fields => {
+    // Reverse the fields so main comes first, then latest stable down to oldest.
+    fields.reverse();
+    for (const field of fields) {
+        const fieldLabel = field.label;
         // Skip non-Pull X.Y... fields.
         if (fieldLabel.indexOf('Pull') === -1) {
             continue;
@@ -20,19 +48,19 @@ chrome.runtime.onMessage.addListener(links => {
             continue;
         }
         if (fieldLabel.indexOf('from Repository') >= 0) {
-            fieldValue = container[1].querySelector('a');
-            pullFromRepository = fieldValue.getAttribute('href');
+            if (!field.href) {
+                continue;
+            }
             // Make sure GitHub repository URLs are not using the unauthenticated git protocol.
-            pullFromRepository = pullFromRepository.replace("git://github.com", "https://github.com");
+            pullFromRepository = field.href.replace("git://github.com", "https://github.com");
         } else {
-            fieldValue = container[1].innerText;
             const parts = fieldLabel.trim().split(" ");
             let version = null;
-            for (const i in parts) {
-                if (parts[i].length === 0 || parts[i] === 'Pull' || parts[i] === 'Branch') {
+            for (const part of parts) {
+                if (part.length === 0 || part === 'Pull' || part === 'Branch') {
                     continue;
                 }
-                version = parts[i].toLowerCase();
+                version = part.toLowerCase();
                 if (version !== 'main') {
                     // Split version number.
                     const verParts = version.split(".");
@@ -46,13 +74,8 @@ chrome.runtime.onMessage.addListener(links => {
                 }
             }
             if (version !== null) {
-                const trimmedValue = fieldValue.trim();
-                const placeholderWords = [
-                    'None',
-                    'Add text',
-                    'Add URL',
-                ];
-                if (trimmedValue.length === 0 || placeholderWords.includes(trimmedValue)) {
+                const trimmedValue = field.value.trim();
+                if (trimmedValue.length === 0 || PLACEHOLDER_WORDS.includes(trimmedValue)) {
                     continue;
                 }
                 pullBranches[version] = trimmedValue;
@@ -60,13 +83,8 @@ chrome.runtime.onMessage.addListener(links => {
 
                 // Append this button to the form.
                 const actionCells = document.querySelectorAll('#pull-form [data-action]');
-                for (let i = 0; i < actionCells.length; i++) {
-                    const cell = actionCells[i];
-                    // Create the copy button.
-                    const button = createCommandButton(branch, version);
-
-                    // Append to the cell.
-                    cell.append(button);
+                for (const cell of actionCells) {
+                    cell.append(createCommandButton(branch, version));
                 }
             }
         }
@@ -76,7 +94,18 @@ chrome.runtime.onMessage.addListener(links => {
     if (Object.keys(pullBranches).length > 0) {
         document.getElementById('bulkCommands').removeAttribute('hidden');
     }
-});
+};
+
+/**
+ * Show a notice in the popup when no pull commands can be generated.
+ *
+ * @param {string} message
+ */
+const showNotice = message => {
+    const notice = document.getElementById('notice');
+    notice.textContent = message;
+    notice.removeAttribute('hidden');
+};
 
 const getMoodleBranch = (version) => {
     if (version === 'main') {
@@ -124,7 +153,7 @@ const generatePullCommand = button => {
             .replaceAll("{{PULL_REPOSITORY}}", pullFromRepository)
             .replaceAll("{{PULL_BRANCH}}", pullBranches[version]);
     }
-    console.error(`Configuration not found for action ${commandType}`);
+    console.error(`Configuration not found for action ${commandAction}`);
     return '';
 }
 
@@ -167,25 +196,7 @@ function generateTable() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    chrome.storage.sync.get(['config'], function(data) {
-        config = data.config || defaultConfig;
-
-        // Use the configuration data to generate the table.
-        generateTable();
-    });
-
-    chrome.windows.getCurrent(currentWindow => {
-        chrome.tabs.query({active: true, windowId: currentWindow.id},
-            activeTabs => {
-                chrome.scripting.executeScript({
-                    target: {tabId: activeTabs[0].id, allFrames: true},
-                    files: ['scripts/send_links.js']
-                });
-            }
-        );
-    });
-
+document.addEventListener('DOMContentLoaded', async() => {
     // Add event listener to copy buttons.
     document.addEventListener('click', e => {
         const commandButton = e.target.closest('button[data-type="command"]');
@@ -220,4 +231,31 @@ document.addEventListener('DOMContentLoaded', () => {
             copyToClipboard(`git push origin ${pushBranches.join(" ")}`, btnPush, `Push command copied!`);
         }
     });
+
+    // Load the configuration and generate the command table before populating it with buttons.
+    try {
+        const data = await chrome.storage.sync.get(['config']);
+        config = data.config || defaultConfig;
+    } catch (error) {
+        console.error('Error loading the configuration. Using the default configuration.', error);
+        config = defaultConfig;
+    }
+    generateTable();
+
+    // Extract the pull fields from the tracker issue in the active tab.
+    try {
+        const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
+        const results = await chrome.scripting.executeScript({
+            target: {tabId: activeTab.id},
+            func: extractTrackerFields,
+        });
+        const fields = (results || []).flatMap(result => result.result || []);
+        processTrackerFields(fields);
+    } catch (error) {
+        console.error('Error reading the tracker issue:', error);
+    }
+
+    if (Object.keys(pullBranches).length === 0) {
+        showNotice('No pull branches found. Open an MDL issue on the Moodle Tracker that has patches.');
+    }
 });

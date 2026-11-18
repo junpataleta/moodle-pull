@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
+        <meta charset="UTF-8">
         <title>Moodle Pull</title>
         <link href="../lib/bootstrap-5.1.3.min.css" rel="stylesheet">
     </head>
@@ -8,6 +9,7 @@
         <div class="card" id="pull-container" style="min-width: 36rem;">
             <div class="card-body">
                 <p class="card-text">Click one of the buttons to generate a pull command for the appropriate Moodle branch:</p>
+                <div id="notice" class="alert alert-info py-2" role="status" hidden></div>
                 <form id="pull-form">
                     <table class="table table-sm">
                         <thead>

@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The popup now reads the tracker fields directly via `scripting.executeScript()` instead of relying on message passing from a content script.
 - Bootstrap's CSS is now bundled with the extension instead of being loaded from a CDN.
 
 ### Fixed
 
 - The `Pull all` and `Push command` buttons not showing when `main` is the only branch with a patch.
+- Command buttons occasionally not being generated if the tracker fields were received before the configuration was loaded.
 
 ## [0.8.0] - 2024-08-16
 
