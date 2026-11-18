@@ -2,7 +2,7 @@
   "manifest_version": 3,
 
   "name": "Pull - Moodle Integration",
-  "description": "A simple Chrome extension that generates git pull commands from the Moodle Tracker for Moodle integrators.",
+  "description": "A simple browser extension that generates git pull commands from the Moodle Tracker for Moodle integrators.",
   "version": "0.9.0",
 
   "action": {
@@ -24,5 +24,15 @@
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": true
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "moodle-pull@junpataleta.github.io",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
   }
 }

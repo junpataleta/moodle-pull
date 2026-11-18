@@ -2,6 +2,9 @@ const pullBranches = {};
 let pullFromRepository = '';
 let config = [];
 
+// Use the promise-based `browser` namespace in Firefox and fall back to `chrome` in Chromium browsers.
+const api = globalThis.browser ?? globalThis.chrome;
+
 const PLACEHOLDER_WORDS = [
     'None',
     'Add text',
@@ -234,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async() => {
 
     // Load the configuration and generate the command table before populating it with buttons.
     try {
-        const data = await chrome.storage.sync.get(['config']);
+        const data = await api.storage.sync.get(['config']);
         config = data.config || defaultConfig;
     } catch (error) {
         console.error('Error loading the configuration. Using the default configuration.', error);
@@ -244,8 +247,8 @@ document.addEventListener('DOMContentLoaded', async() => {
 
     // Extract the pull fields from the tracker issue in the active tab.
     try {
-        const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
-        const results = await chrome.scripting.executeScript({
+        const [activeTab] = await api.tabs.query({active: true, currentWindow: true});
+        const results = await api.scripting.executeScript({
             target: {tabId: activeTab.id},
             func: extractTrackerFields,
         });

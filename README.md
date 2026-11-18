@@ -1,7 +1,9 @@
 # moodle-pull
-A simple Chrome extension that generates git pull commands from the Moodle Tracker for Moodle integrators.
+A simple browser extension (Chrome and Firefox) that generates git pull commands from the Moodle Tracker for Moodle integrators.
 
 ## Installation
+
+### Chrome
 1. Clone the repository (or download the zip) to any local directory you prefer. e.g.
 `git clone git@github.com:junpataleta/moodle-pull.git`
 2. Open Chrome and go to `chrome://extensions/`.
@@ -10,6 +12,15 @@ A simple Chrome extension that generates git pull commands from the Moodle Track
 5. Browse to the location of the `moodle-pull` folder.
 6. Select the folder and press `Open`.
 7. You should see the `PULL` button beside your browser's address bar.
+
+### Firefox
+1. Clone the repository (or download the zip) to any local directory you prefer.
+2. Open Firefox and go to `about:debugging#/runtime/this-firefox`.
+3. Press `Load Temporary Add-on...`.
+4. Browse to the `moodle-pull` folder and select its `manifest.json` file.
+5. You should see the `PULL` button in the toolbar (you may need to pin it from the extensions menu).
+
+Temporary add-ons are removed when Firefox restarts. Alternatively, run `web-ext run` from the `moodle-pull` folder.
 
 ## Usage
 1. On the issue page in the tracker, press the `PULL` button.

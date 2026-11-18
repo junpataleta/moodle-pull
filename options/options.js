@@ -1,3 +1,6 @@
+// Use the promise-based `browser` namespace in Firefox and fall back to `chrome` in Chromium browsers.
+const api = globalThis.browser ?? globalThis.chrome;
+
 let currentConfig = '';
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -6,13 +9,17 @@ document.addEventListener('DOMContentLoaded', function() {
     defaultConfigTextContainer.innerText = JSON.stringify(defaultConfig, null, 2);
 
     // Load saved configuration when the options page is opened.
-    chrome.storage.sync.get(['config'], function(data) {
+    api.storage.sync.get(['config']).then(data => {
         // Populate your options page with the loaded configuration.
         currentConfig = data.config || [];
         if (currentConfig.length === 0) {
             // Use default configuration if none is saved.
             currentConfig = defaultConfig;
         }
+        populateOptions(currentConfig);
+    }).catch(error => {
+        console.error('Error loading configuration:', error);
+        currentConfig = defaultConfig;
         populateOptions(currentConfig);
     });
 
@@ -80,13 +87,11 @@ function validateConfig(config) {
 
 function saveConfig(config) {
     currentConfig = config;
-    // Save the configuration to chrome.storage.sync.
-    chrome.storage.sync.set({'config': config}, function() {
-        if (chrome.runtime.lastError) {
-            console.error('Error saving configuration:', chrome.runtime.lastError);
-        } else {
-            // Show a success message.
-            new bootstrap.Toast(document.getElementById('successToast')).show();
-        }
+    // Save the configuration to the synced extension storage.
+    api.storage.sync.set({'config': config}).then(() => {
+        // Show a success message.
+        new bootstrap.Toast(document.getElementById('successToast')).show();
+    }).catch(error => {
+        console.error('Error saving configuration:', error);
     });
 }

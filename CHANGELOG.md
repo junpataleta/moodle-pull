@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Firefox support.
+
 ### Changed
 
 - The popup now reads the tracker fields directly via `scripting.executeScript()` instead of relying on message passing from a content script.
