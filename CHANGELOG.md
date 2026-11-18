@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Bootstrap has been upgraded to v5.3.9.
+- The minimum supported versions are now Firefox 140 and Firefox for Android 142.
+
 ## [1.0.0] - 2026-11-18
 
 ### Added
