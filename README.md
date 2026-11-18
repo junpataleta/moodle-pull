@@ -41,8 +41,3 @@ To test local changes, load the extension as a temporary add-on:
 3. Select the `manifest.json` file in the `moodle-pull` folder.
 
 Temporary add-ons are removed when Firefox restarts. Alternatively, run `web-ext run` from the `moodle-pull` folder.
-
-### Releasing a new Firefox version
-1. Bump the version in `manifest.json` and update `CHANGELOG.md`.
-2. Sign the extension with [web-ext](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/): `web-ext sign --channel=unlisted` (requires [AMO API credentials](https://addons.mozilla.org/developers/addon/api/key/)).
-3. Tag the release and attach the signed `.xpi` file from `web-ext-artifacts/` to a new GitHub release.
