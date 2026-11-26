@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A keyboard shortcut to open the popup (`Alt+Shift+P` by default).
 - Commands can have an optional `description`, which the popup shows when that command is selected.
+- A `Push remote` setting on the options page, for when your integration remote isn't called `origin`. ([#4](https://github.com/junpataleta/moodle-pull/issues/4))
 
 ### Changed
 

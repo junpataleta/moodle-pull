@@ -23,3 +23,15 @@ const defaultConfig = [
     "description": "Copies only the repository URL and the patch branch."
   }
 ];
+
+// The remote that the push command pushes to.
+const defaultPushRemote = 'origin';
+
+/**
+ * Check whether a remote name is safe to use in the push command. Only allow characters that are valid in Git remote
+ * names and have no special meaning in a shell, since the command is pasted into a terminal.
+ *
+ * @param {string} remote
+ * @returns {boolean}
+ */
+const isValidRemoteName = remote => /^[A-Za-z0-9_][A-Za-z0-9._/-]*$/.test(remote);

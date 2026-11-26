@@ -49,8 +49,17 @@
                 </div>
             </div>
         </div>
-        <form id="configForm">
+        <form id="configForm" novalidate>
             <div class="mb-3 mt-4">
+                <label for="pushRemote" class="form-label">Push remote:</label>
+                <input type="text" class="form-control font-monospace" id="pushRemote" autocomplete="off" spellcheck="false"
+                       aria-describedby="pushRemoteHelp pushRemoteError" style="max-width: 20rem;">
+                <div id="pushRemoteError" class="invalid-feedback"></div>
+                <div id="pushRemoteHelp" class="form-text">
+                    The Git remote that the push command pushes to, for example <code>origin</code> or <code>integration</code>.
+                </div>
+            </div>
+            <div class="mb-3">
                 <label for="configTextarea" class="form-label">Configuration:</label>
                 <textarea class="form-control" id="configTextarea" style="height: calc(100vh - 400px);" placeholder="Enter your configuration JSON here"></textarea>
             </div>

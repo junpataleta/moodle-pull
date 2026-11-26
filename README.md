@@ -35,6 +35,8 @@ When you're ready to push, open the popup again and press `Copy push for all bra
 
 To copy a command for a single branch, use the `One branch` section: choose the command (`Pull` by default), then press the branch. With the keyboard, press `Tab` twice from `Copy pull for all branches` to reach the commands, use the arrow keys to choose one, then press `Tab` to reach the branches.
 
+The push command pushes to `origin` by default. If your remote has a different name (such as `integration`), set it in the extension's options.
+
 You can change the keyboard shortcut in your browser's extension shortcut settings, and the available commands in the extension's options.
 
 ## Development

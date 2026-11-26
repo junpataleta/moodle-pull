@@ -12,6 +12,8 @@ const state = {
     config: [],
     /** Index of the command selected for single branches in the configuration. */
     selected: 0,
+    /** The remote that the push command pushes to. */
+    pushRemote: defaultPushRemote,
     issueKey: '',
     repository: '',
     /** @type {{version: string, label: string, branch: string, pullBranch: string}[]} */
@@ -160,7 +162,7 @@ const generateCommand = (command, branch) => command.command
  */
 const generatePullForAll = () => state.branches.map(branch => generateCommand(pullCommand(), branch)).join(' && ');
 
-const generatePushCommand = () => `git push origin ${state.branches.map(branch => branch.branch).join(' ')}`;
+const generatePushCommand = () => `git push ${state.pushRemote} ${state.branches.map(branch => branch.branch).join(' ')}`;
 
 /**
  * Show a notice instead of the controls when no commands can be generated.
@@ -345,8 +347,11 @@ const updateCommandLabels = () => {
  */
 const loadConfig = async() => {
     try {
-        const data = await api.storage.sync.get(['config']);
+        const data = await api.storage.sync.get(['config', 'pushRemote']);
         state.config = Array.isArray(data.config) && data.config.length > 0 ? data.config : defaultConfig;
+        if (typeof data.pushRemote === 'string' && isValidRemoteName(data.pushRemote)) {
+            state.pushRemote = data.pushRemote;
+        }
     } catch (error) {
         console.error('Error loading the configuration. Using the default configuration.', error);
         state.config = defaultConfig;
