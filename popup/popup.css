@@ -1,3 +1,65 @@
+:root {
+    --pull-focus-color: #0a58ca;
+}
+
+[data-bs-theme="dark"] {
+    --pull-focus-color: #6ea8fe;
+}
+
+body {
+    width: 30rem;
+}
+
+/*
+ * Use a solid, high-contrast focus outline instead of Bootstrap's translucent focus shadow, which does not have enough
+ * contrast against the background.
+ */
+:focus-visible,
+.btn:focus-visible,
+.btn-check:focus-visible + .btn {
+    outline: 3px solid var(--pull-focus-color);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+/* Keep the outline of the branch buttons inside the list so it is not clipped by the list's rounded corners. */
+.branch-button:focus-visible,
+.branch-button.default-action:focus {
+    outline-offset: -3px;
+}
+
+.branch-button {
+    min-height: 44px;
+}
+
+.branch-button:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+#copy-pull-all,
+#copy-push {
+    min-height: 44px;
+}
+
+/*
+ * The default action is focused when the popup opens so that Enter copies its command. Browsers don't always treat
+ * that as :focus-visible, so show the outline whenever it has focus to make it clear what Enter will do.
+ */
+.default-action:focus {
+    outline: 3px solid var(--pull-focus-color);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+#command-options .btn {
+    min-height: 32px;
+}
+
+.copied-command {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 /*
  * Bootstrap's outline secondary button keeps its light mode grey in dark mode, which does not have enough contrast
  * against the dark background. Use a lighter grey in dark mode instead.

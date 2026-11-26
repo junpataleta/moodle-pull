@@ -1,7 +1,3 @@
-const pullBranches = {};
-let pullFromRepository = '';
-let config = [];
-
 // Use the promise-based `browser` namespace in Firefox and fall back to `chrome` in Chromium browsers.
 const api = globalThis.browser ?? globalThis.chrome;
 
@@ -11,17 +7,28 @@ const PLACEHOLDER_WORDS = [
     'Add URL',
 ];
 
+const state = {
+    /** @type {{type: string, title: string, command: string, description?: string}[]} */
+    config: [],
+    /** Index of the command selected for single branches in the configuration. */
+    selected: 0,
+    issueKey: '',
+    repository: '',
+    /** @type {{version: string, label: string, branch: string, pullBranch: string}[]} */
+    branches: [],
+};
+
 /**
- * Runs in the context of the tracker page and returns the issue's custom fields.
+ * Runs in the context of the tracker page and returns the issue key and the issue's custom fields.
  *
  * This function is serialised and injected into the page, so it must not reference anything outside its own scope.
  *
- * @returns {{label: string, value: string, href: (string|null)}[]}
+ * @returns {{issueKey: string, fields: {label: string, value: string, href: (string|null)}[]}}
  */
 const extractTrackerFields = () => {
     const selector = '[data-testid$="details-group"] '
         + 'div[data-component-selector="jira-issue-field-heading-field-wrapper"][data-testid*="customfield"]';
-    return Array.from(document.querySelectorAll(selector)).map(wrapper => {
+    const fields = Array.from(document.querySelectorAll(selector)).map(wrapper => {
         const [labelElement, valueElement] = wrapper.children;
         const link = valueElement ? valueElement.querySelector('a') : null;
         return {
@@ -30,235 +37,383 @@ const extractTrackerFields = () => {
             href: link ? link.getAttribute('href') : null,
         };
     });
+    const issueKeyMatch = window.location.pathname.match(/MDL-\d+/);
+    return {
+        issueKey: issueKeyMatch ? issueKeyMatch[0] : '',
+        fields,
+    };
+};
+
+const getMoodleBranch = version => version === 'main' ? 'main' : `MOODLE_${version}_STABLE`;
+
+/**
+ * Parse the version from a pull branch field label, e.g. "Pull 4.5 Branch" or "Pull Main Branch".
+ *
+ * @param {string} fieldLabel
+ * @returns {{version: string, label: string}|null} The compact version (e.g. "405") and a display label.
+ */
+const parseVersion = fieldLabel => {
+    let result = null;
+    for (const part of fieldLabel.trim().split(' ')) {
+        if (part.length === 0 || part === 'Pull' || part === 'Branch') {
+            continue;
+        }
+        const version = part.toLowerCase();
+        if (version === 'main') {
+            result = {version, label: 'main'};
+            continue;
+        }
+        const [major, minor = '0'] = version.split('.');
+        // Pre-pad the minor version with 0 for 4.0 and up. Older versions combine both parts.
+        const compact = major >= 4 ? major + minor.padStart(2, '0') : major + minor;
+        result = {version: compact, label: `${major}.${minor}`};
+    }
+    return result;
 };
 
 /**
- * Process the fields extracted from the tracker page and generate the command buttons.
+ * Process the fields extracted from the tracker page into the list of branches and the repository.
  *
  * @param {{label: string, value: string, href: (string|null)}[]} fields
  */
 const processTrackerFields = fields => {
-    // Reverse the fields so main comes first, then latest stable down to oldest.
-    fields.reverse();
     for (const field of fields) {
         const fieldLabel = field.label;
-        // Skip non-Pull X.Y... fields.
-        if (fieldLabel.indexOf('Pull') === -1) {
-            continue;
-        }
-        // We don't need the Pull Diff URL.
-        if (fieldLabel.indexOf('Diff URL') >= 0) {
+        // Skip non-Pull X.Y... fields and the Pull Diff URL.
+        if (fieldLabel.indexOf('Pull') === -1 || fieldLabel.indexOf('Diff URL') >= 0) {
             continue;
         }
         if (fieldLabel.indexOf('from Repository') >= 0) {
-            if (!field.href) {
-                continue;
+            if (field.href) {
+                // Make sure GitHub repository URLs are not using the unauthenticated git protocol.
+                state.repository = field.href.replace('git://github.com', 'https://github.com');
             }
-            // Make sure GitHub repository URLs are not using the unauthenticated git protocol.
-            pullFromRepository = field.href.replace("git://github.com", "https://github.com");
-        } else {
-            const parts = fieldLabel.trim().split(" ");
-            let version = null;
-            for (const part of parts) {
-                if (part.length === 0 || part === 'Pull' || part === 'Branch') {
-                    continue;
-                }
-                version = part.toLowerCase();
-                if (version !== 'main') {
-                    // Split version number.
-                    const verParts = version.split(".");
-                    if (verParts[0] >= 4) {
-                        // Pre-pad decimal part with 0 and join for 4.0 and up.
-                        version = verParts[0] + verParts[1].padStart(2, "0");
-                    } else {
-                        // Just combine the whole number and decimal part
-                        version = verParts[0] + verParts[1];
-                    }
-                }
-            }
-            if (version !== null) {
-                const trimmedValue = field.value.trim();
-                if (trimmedValue.length === 0 || PLACEHOLDER_WORDS.includes(trimmedValue)) {
-                    continue;
-                }
-                pullBranches[version] = trimmedValue;
-                const branch = getMoodleBranch(version);
-
-                // Append this button to the form.
-                const actionCells = document.querySelectorAll('#pull-form [data-action]');
-                for (const cell of actionCells) {
-                    cell.append(createCommandButton(branch, version));
-                }
-            }
+            continue;
         }
+        const parsed = parseVersion(fieldLabel);
+        const pullBranch = field.value.trim();
+        if (!parsed || pullBranch.length === 0 || PLACEHOLDER_WORDS.includes(pullBranch)) {
+            continue;
+        }
+        state.branches.push({
+            ...parsed,
+            branch: getMoodleBranch(parsed.version),
+            pullBranch,
+        });
     }
-
-    // Enable Pull all and Push buttons if there are command buttons.
-    if (Object.keys(pullBranches).length > 0) {
-        document.getElementById('bulkCommands').removeAttribute('hidden');
-    }
+    // List main first, then the latest stable branch down to the oldest, whatever order the tracker shows them in.
+    const sortKey = branch => branch.version === 'main' ? Infinity : Number(branch.version);
+    state.branches.sort((a, b) => sortKey(b) - sortKey(a));
 };
 
 /**
- * Show a notice in the popup when no pull commands can be generated.
+ * Summarise the branches, e.g. "main, 5.3, 5.2".
+ *
+ * @returns {string}
+ */
+const summariseBranches = () => state.branches.map(branch => branch.label).join(', ');
+
+/**
+ * Shorten a repository URL for display, e.g. "https://github.com/jdoe/moodle.git" becomes "jdoe/moodle".
+ *
+ * @param {string} repository
+ * @returns {string}
+ */
+const shortRepositoryName = repository => {
+    try {
+        const url = new URL(repository);
+        const path = url.pathname.replace(/^\/|\.git$/g, '');
+        return url.hostname === 'github.com' ? path : `${url.hostname}/${path}`;
+    } catch {
+        return repository;
+    }
+};
+
+const selectedCommand = () => state.config[state.selected];
+
+/**
+ * The command used for all branches: the "pull" command, or the first configured command if there is none.
+ *
+ * Other commands, such as pulling without checking out the Moodle branch first, don't make sense for all branches at
+ * once, so they are only offered for one branch at a time.
+ *
+ * @returns {{type: string, title: string, command: string}}
+ */
+const pullCommand = () => state.config.find(command => command.type === 'pull') || state.config[0];
+
+/**
+ * Generate a command for a branch.
+ *
+ * @param {{command: string}} command
+ * @param {{branch: string, pullBranch: string}} branch
+ * @returns {string}
+ */
+const generateCommand = (command, branch) => command.command
+    .replaceAll('{{BRANCH}}', branch.branch)
+    .replaceAll('{{PULL_REPOSITORY}}', state.repository)
+    .replaceAll('{{PULL_BRANCH}}', branch.pullBranch);
+
+/**
+ * Generate the pull command for all branches, chained with `&&`.
+ *
+ * @returns {string}
+ */
+const generatePullForAll = () => state.branches.map(branch => generateCommand(pullCommand(), branch)).join(' && ');
+
+const generatePushCommand = () => `git push origin ${state.branches.map(branch => branch.branch).join(' ')}`;
+
+/**
+ * Show a notice instead of the controls when no commands can be generated.
  *
  * @param {string} message
  */
 const showNotice = message => {
     const notice = document.getElementById('notice');
     notice.textContent = message;
-    notice.removeAttribute('hidden');
-};
-
-const getMoodleBranch = (version) => {
-    if (version === 'main') {
-        return version;
-    } else {
-        return `MOODLE_${version}_STABLE`;
-    }
-}
-
-/**
- * Create a command button that will be appended to the popup later.
- *
- * @param branch
- * @param version
- * @returns {HTMLButtonElement}
- */
-const createCommandButton = (branch, version) => {
-    const button = document.createElement('button');
-    button.className = "btn btn-outline-secondary m-1";
-    button.type = 'button';
-    button.dataset.version = version;
-    button.dataset.branch = branch;
-    button.dataset.type = 'command';
-    button.innerText = version;
-    return button;
+    notice.hidden = false;
+    document.getElementById('controls').hidden = true;
 };
 
 /**
- * Generate the command to be copied to the clipboard.
+ * Announce the result of a copy action and show the copied command.
  *
- * @param button
- * @return {string}
+ * @param {string} message
+ * @param {string} command The copied command, or an empty string on failure.
+ * @param {boolean} isError
  */
-const generatePullCommand = button => {
-    const version = button.dataset.version;
-    const branch = button.dataset.branch;
-    const commandType = parseInt(button.closest('[data-action]').dataset.type);
-    const commandAction = parseInt(button.closest('[data-action]').dataset.action);
+const showStatus = (message, command, isError = false) => {
+    const status = document.getElementById('status');
+    const copiedCommand = document.getElementById('copied-command');
+    // Clear the status first so that screen readers announce the message even if it is the same as the last one.
+    status.textContent = '';
+    copiedCommand.hidden = true;
+    setTimeout(() => {
+        status.className = isError ? 'text-danger-emphasis' : 'text-success-emphasis';
+        status.textContent = message;
+        copiedCommand.textContent = command;
+        copiedCommand.hidden = command.length === 0;
+    }, 50);
+};
 
-    const commandConfig = config[commandAction];
-    if (commandConfig) {
-        // Use the dynamically loaded command from config.
-        return commandConfig.command
-            .replaceAll("{{BRANCH}}", branch)
-            .replaceAll("{{PULL_REPOSITORY}}", pullFromRepository)
-            .replaceAll("{{PULL_BRANCH}}", pullBranches[version]);
+/**
+ * Copy a command to the clipboard and report the result.
+ *
+ * The popup stays open so the confirmation can be read. It closes on its own once the user switches to their terminal.
+ *
+ * @param {string} command
+ * @param {string} successMessage
+ */
+const copyToClipboard = async(command, successMessage) => {
+    try {
+        await navigator.clipboard.writeText(command);
+        showStatus(successMessage, command);
+    } catch (error) {
+        console.error('Error copying to the clipboard:', error);
+        showStatus("Couldn't copy the command. Try again.", '', true);
     }
-    console.error(`Configuration not found for action ${commandAction}`);
-    return '';
-}
+};
 
-const copyToClipboard = (command, tooltipTarget, successMessage) => {
-    navigator.clipboard.writeText(command).then(() => {
-        console.log("Git pull command '" + command + "' has been copied to the clipboard.");
+/**
+ * Create a small copy icon.
+ *
+ * @returns {SVGSVGElement}
+ */
+const createCopyIcon = () => {
+    const svgNamespace = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNamespace, 'svg');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.setAttribute('fill', 'currentColor');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('flex-shrink-0');
+    const path = document.createElementNS(svgNamespace, 'path');
+    path.setAttribute('d', 'M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 '
+        + '0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 '
+        + '1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z');
+    svg.append(path);
+    return svg;
+};
 
-        // Change button text to indicate the command has been copied.
-        const tooltip = new bootstrap.Tooltip(tooltipTarget, {
-            title: successMessage,
-            trigger: "manual",
+/**
+ * Render the command options from the configuration.
+ */
+const renderCommandOptions = () => {
+    const container = document.getElementById('command-options');
+    state.config.forEach((command, index) => {
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.className = 'btn-check';
+        input.name = 'command';
+        input.id = `command-${index}`;
+        input.value = String(index);
+        input.autocomplete = 'off';
+        input.checked = index === state.selected;
+        input.addEventListener('change', () => {
+            state.selected = index;
+            updateCommandLabels();
         });
-        tooltip.show();
-    }).catch().finally(() => {
-        // Delay by half a second before closing the popup.
-        setTimeout(window.close, 500);
+
+        const label = document.createElement('label');
+        label.className = 'btn btn-outline-secondary btn-sm';
+        label.htmlFor = input.id;
+        label.textContent = command.title;
+
+        container.append(input, label);
     });
-}
+};
 
 /**
- * Generate the table based on the configuration data and append it to the popup.
+ * Render a copy button for each branch.
  */
-function generateTable() {
-    const tableBody = document.getElementById('pull-table-body');
+const renderBranches = () => {
+    const list = document.getElementById('branch-list');
+    state.branches.forEach((branch, index) => {
+        const item = document.createElement('li');
+        item.className = 'list-group-item p-0';
 
-    // Loop through the configuration and create table rows
-    for (let key in config) {
-        const row = document.createElement('tr');
-        const titleCell = document.createElement('th');
-        titleCell.classList.add('fw-normal');
-        titleCell.textContent = config[key].title;
-        const actionCell = document.createElement('td');
-        actionCell.setAttribute('data-action', key);
-        actionCell.setAttribute('data-type', config[key].type);
-        row.appendChild(titleCell);
-        row.appendChild(actionCell);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'branch-button btn w-100 d-flex align-items-center gap-2 text-start border-0 rounded-0';
 
-        // Append the row to the table body
-        tableBody.appendChild(row);
-    }
-}
+        const label = document.createElement('span');
+        label.className = 'fw-semibold text-nowrap';
+        label.textContent = branch.label;
 
-document.addEventListener('DOMContentLoaded', async() => {
-    // Add event listener to copy buttons.
-    document.addEventListener('click', e => {
-        const commandButton = e.target.closest('button[data-type="command"]');
-        if (commandButton) {
-            const command = generatePullCommand(commandButton);
-            if (command) {
-                copyToClipboard(command, commandButton, `Copied for ${commandButton.dataset.version}`);
-            }
-        }
+        // Spoken after the visible label, so that the visible text stays at the start of the button's name.
+        const hiddenAction = document.createElement('span');
+        hiddenAction.className = 'visually-hidden';
+        hiddenAction.dataset.commandName = '';
 
-        // Generate the pull command for all branches and copy to the clipboard.
-        const btnPullAll = e.target.closest('#pullAll');
-        if (btnPullAll) {
-            const buttons = document.querySelectorAll('td[data-type="pull"] button[data-type="command"]');
-            const pullCommands = [];
-            buttons.forEach(button => {
-                const command = generatePullCommand(button);
-                if (command) {
-                    pullCommands.push(command);
-                }
-            });
-            copyToClipboard(pullCommands.join(" && "), btnPullAll, `Pull commands copied for all branches!`);
-        }
+        const details = document.createElement('span');
+        details.id = `branch-details-${index}`;
+        details.className = 'flex-grow-1 small font-monospace text-body-secondary text-break';
+        details.setAttribute('aria-hidden', 'true');
+        details.textContent = branch.pullBranch;
+        button.setAttribute('aria-describedby', details.id);
 
-        // Generate the push command and copy to the clipboard.
-        const btnPush = e.target.closest('#pushCommand');
-        if (btnPush) {
-            const pushBranches = [];
-            Object.keys(pullBranches).forEach(version => {
-                pushBranches.push(getMoodleBranch(version));
-            })
-            copyToClipboard(`git push origin ${pushBranches.join(" ")}`, btnPush, `Push command copied!`);
-        }
+        button.append(label, hiddenAction, details, createCopyIcon());
+        button.addEventListener('click', () => {
+            copyToClipboard(generateCommand(selectedCommand(), branch), `Copied ${selectedCommand().title} for ${branch.label}`);
+        });
+
+        item.append(button);
+        list.append(item);
     });
 
-    // Load the configuration and generate the command table before populating it with buttons.
+};
+
+/**
+ * Set up the actions for all branches, or move the push action next to the branch when there is only one.
+ */
+const renderAllBranchesActions = () => {
+    const count = state.branches.length;
+    const pushButton = document.getElementById('copy-push');
+    if (count === 1) {
+        // With a single branch, copying for "all branches" would repeat the branch's own button. Keep only the push
+        // action, after the branch.
+        const branch = state.branches[0];
+        document.getElementById('all-branches').hidden = true;
+        document.getElementById('one-branch-heading').textContent = 'Command';
+        pushButton.textContent = `Copy push for ${branch.label}`;
+        pushButton.classList.add('mt-2');
+        document.getElementById('branch-list').after(pushButton);
+        return;
+    }
+    document.getElementById('all-branches-summary').textContent = ` · ${summariseBranches()}`;
+    document.getElementById('copy-pull-all-label').textContent =
+        `Copy ${pullCommand().title.toLowerCase()} for all ${count} branches`;
+    pushButton.textContent = `Copy push for all ${count} branches`;
+};
+
+/**
+ * Update the labels that mention the selected command.
+ */
+const updateCommandLabels = () => {
+    const command = selectedCommand();
+    document.querySelectorAll('[data-command-name]').forEach(element => {
+        element.textContent = `, copy ${command.title}`;
+    });
+
+    const description = document.getElementById('command-description');
+    description.textContent = command.description || '';
+    description.hidden = !command.description;
+};
+
+/**
+ * Load the configuration, and select the pull command so that the default action is always to pull.
+ */
+const loadConfig = async() => {
     try {
         const data = await api.storage.sync.get(['config']);
-        config = data.config || defaultConfig;
+        state.config = Array.isArray(data.config) && data.config.length > 0 ? data.config : defaultConfig;
     } catch (error) {
         console.error('Error loading the configuration. Using the default configuration.', error);
-        config = defaultConfig;
+        state.config = defaultConfig;
     }
-    generateTable();
+    state.selected = state.config.indexOf(pullCommand());
+};
 
-    // Extract the pull fields from the tracker issue in the active tab.
+/**
+ * Read the issue from the tracker page in the active tab.
+ *
+ * @returns {Promise<boolean>} Whether the page could be read.
+ */
+const loadTrackerIssue = async() => {
     try {
         const [activeTab] = await api.tabs.query({active: true, currentWindow: true});
-        const results = await api.scripting.executeScript({
+        const [result] = await api.scripting.executeScript({
             target: {tabId: activeTab.id},
             func: extractTrackerFields,
         });
-        const fields = (results || []).flatMap(result => result.result || []);
+        const {issueKey, fields} = result.result;
+        state.issueKey = issueKey;
         processTrackerFields(fields);
+        return true;
     } catch (error) {
         console.error('Error reading the tracker issue:', error);
+        return false;
+    }
+};
+
+document.addEventListener('DOMContentLoaded', async() => {
+    const [canReadPage] = await Promise.all([loadTrackerIssue(), loadConfig()]);
+
+    if (state.issueKey) {
+        document.getElementById('issue-key').textContent = state.issueKey;
+    }
+    if (state.repository) {
+        document.getElementById('repository').textContent = shortRepositoryName(state.repository);
     }
 
-    if (Object.keys(pullBranches).length === 0) {
-        showNotice('No pull branches found. Open an MDL issue on the Moodle Tracker that has patches.');
+    if (!canReadPage) {
+        showNotice("Can't read this page. Open an MDL issue on the Moodle Tracker, then open Moodle Pull again.");
+        return;
     }
+    if (state.branches.length === 0) {
+        showNotice('No pull branches found. Open an MDL issue on the Moodle Tracker that has patches.');
+        return;
+    }
+
+    renderCommandOptions();
+    renderBranches();
+    renderAllBranchesActions();
+    updateCommandLabels();
+    document.getElementById('controls').hidden = false;
+
+    const isSingleBranch = state.branches.length === 1;
+    const branchesDescription = isSingleBranch ? state.branches[0].label : `all ${state.branches.length} branches`;
+    document.getElementById('copy-pull-all').addEventListener('click', () => {
+        copyToClipboard(generatePullForAll(), `Copied ${pullCommand().title} for ${branchesDescription}`);
+    });
+    document.getElementById('copy-push').addEventListener('click', () => {
+        copyToClipboard(generatePushCommand(), `Copied push for ${branchesDescription}`);
+    });
+
+    // Focus the most common action, so that pressing Enter copies it: pulling all branches, or the only branch.
+    const defaultAction = isSingleBranch
+        ? document.querySelector('.branch-button')
+        : document.getElementById('copy-pull-all');
+    defaultAction.classList.add('default-action');
+    defaultAction.focus({focusVisible: true});
 });

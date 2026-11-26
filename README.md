@@ -26,11 +26,16 @@ To update, install the `.xpi` file from the newest release the same way. It repl
 To update, run `git pull` in the `moodle-pull` folder (or download the zip again), then press the reload button on the extension's card in `chrome://extensions/`.
 
 ## Usage
-1. On the issue page in the tracker, press the `PULL` button.
-2. The available branches with patch will automatically be listed as buttons.
-3. Press the desired branch of the patch that you would like to generate a pull command for. The pull command will be automatically copied to your clipboard.
-4. Paste to your terminal.
-5. Integrate away!
+1. On an MDL issue page in the tracker, press the `PULL` button (or press `Alt+Shift+P`).
+2. Press `Enter` (or the `Copy pull for all branches` button) to copy the pull command for every branch with a patch, chained with `&&`.
+3. Paste to your terminal.
+4. Integrate away!
+
+When you're ready to push, open the popup again and press `Copy push for all branches`.
+
+To copy a command for a single branch, use the `One branch` section: choose the command (`Pull` by default), then press the branch. With the keyboard, press `Tab` twice from `Copy pull for all branches` to reach the commands, use the arrow keys to choose one, then press `Tab` to reach the branches.
+
+You can change the keyboard shortcut in your browser's extension shortcut settings, and the available commands in the extension's options.
 
 ## Development
 
