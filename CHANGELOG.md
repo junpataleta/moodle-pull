@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A keyboard shortcut to open the popup (`Alt+Shift+P` by default).
+- Commands can have an optional `description`, which the popup shows when that command is selected.
 
 ### Changed
 
