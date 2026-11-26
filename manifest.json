@@ -21,6 +21,15 @@
     "https://tracker.moodle.org/browse/MDL-*"
   ],
 
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Open Moodle Pull"
+    }
+  },
+
   "options_ui": {
     "page": "options/options.html",
     "open_in_tab": true
